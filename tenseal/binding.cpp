@@ -281,7 +281,10 @@ void bind_bfv_vector(py::module &m) {
         .def_static(
             "pack_vectors", [](const vector<shared_ptr<BFVVector>> &vectors) {
                 return pack_vectors<BFVVector, BatchEncoder, int64_t>(vectors);
-            });
+            })
+        .def("rotate_vector_inplace", &BFVVector::rotate_vector_inplace,
+             "Rotate encrypted plaintext cyclically. If steps < 0, rotates right, else rotates left.",
+             py::arg("steps"), py::arg("galois_keys"));
 }
 
 void bind_ckks_vector(py::module &m) {
@@ -501,7 +504,10 @@ void bind_ckks_vector(py::module &m) {
         .def_static(
             "pack_vectors", [](const vector<shared_ptr<CKKSVector>> &vectors) {
                 return pack_vectors<CKKSVector, CKKSEncoder, double>(vectors);
-            });
+            })
+        .def("rotate_vector_inplace", &CKKSVector::rotate_vector_inplace,
+             "Rotate encrypted plaintext cyclically. If steps < 0, rotates right, else rotates left.",
+             py::arg("steps"), py::arg("galois_keys"));
 
     m.def("im2col_encoding",
           [](shared_ptr<TenSEALContext> ctx, vector<vector<double>> &raw_input,
