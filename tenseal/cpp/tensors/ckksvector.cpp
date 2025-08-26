@@ -516,6 +516,66 @@ shared_ptr<CKKSVector> CKKSVector::enc_matmul_plain_inplace(
     return shared_from_this();
 }
 
+shared_ptr<CKKSVector> CKKSVector::enc_matmul_enc_inplace(
+    const shared_ptr<CKKSVector>& enc_vec, const size_t rows_nb) {
+    if (this->_ciphertexts.size() != 1)
+        throw invalid_argument(
+            "can't execute enc_matmul_enc on chunked vectors");
+
+    if (enc_vec == nullptr)
+        throw invalid_argument("Encrypted vector can't be null");
+
+    if (enc_vec->_ciphertexts.size() != 1)
+        throw invalid_argument(
+            "can't execute enc_matmul_enc with a chunked encrypted vector");
+
+    if (!this->tenseal_context()->equals(enc_vec->tenseal_context())) {
+        throw invalid_argument(
+            "can't multiply vectors that have different contexts");
+    }
+
+    // matrix vector is organized as a vertical scan and should have size =
+    // rows_nb * chunks_nb
+    if (rows_nb == 0 || this->size() % rows_nb != 0) {
+        throw invalid_argument("Invalid row_size for encoded matrix");
+    }
+
+    size_t chunks_nb = this->size() / rows_nb;
+
+    // Ensure shapes match: the encoded vector must be laid out to match the
+    // matrix encoding (i.e., each element repeated rows_nb times, padded to the
+    // next power of 2, and replicated to slot_count).
+    if (enc_vec->size() != this->size()) {
+        throw invalid_argument(
+            "Vector shape doesn't match with encoded matrix layout");
+    }
+
+    // replicate logical size to slot_count to enable elementwise operations
+    size_t slot_count = this->tenseal_context()->slot_count<CKKSEncoder>();
+    this->_sizes = {slot_count};
+    auto enc_vec_copy = enc_vec->copy();
+    enc_vec_copy->chunked_size(vector<size_t>{slot_count});
+
+    // element-wise multiply with the already-encoded encrypted vector
+    this->mul_inplace(enc_vec_copy);
+
+    auto galois_keys = this->tenseal_context()->galois_keys();
+    auto tmp = this->copy();
+
+    while (chunks_nb > 1) {
+        tmp = this->copy();
+        chunks_nb = static_cast<size_t>(
+            1 << (static_cast<size_t>(ceil(log2(chunks_nb))) - 1));
+        tmp->rotate_vector_inplace(static_cast<int>(rows_nb * chunks_nb),
+                                   *galois_keys);
+        this->add_inplace(tmp);
+    }
+
+    this->_sizes = {rows_nb};
+
+    return shared_from_this();
+}
+
 shared_ptr<CKKSVector> CKKSVector::replicate_first_slot_inplace(size_t n) {
     auto slot_count = this->tenseal_context()->slot_count<CKKSEncoder>();
     // mask

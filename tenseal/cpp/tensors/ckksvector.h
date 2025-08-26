@@ -2,6 +2,7 @@
 #define TENSEAL_TENSOR_CKKSVECTOR_H
 
 #include "tenseal/cpp/tensors/encrypted_vector.h"
+#include <optional>
 #include "tenseal/proto/tensors.pb.h"
 
 namespace tenseal {
@@ -87,6 +88,19 @@ class CKKSVector
                                          size_t row_size) override;
 
     /**
+     * Encrypted Matrix multiplication with encrypted vector.
+     * The current CKKSVector must contain the encoded matrix produced by
+     * enc_matmul_encoding. Multiplies that encoded matrix with an encrypted
+     * vector and returns the result.
+     **/
+    encrypted_t enc_matmul_enc_inplace(const encrypted_t& enc_vec,
+                                       size_t row_size);
+    encrypted_t enc_matmul_enc(const encrypted_t& enc_vec,
+                               size_t row_size) const {
+        return this->copy()->enc_matmul_enc_inplace(enc_vec, row_size);
+    }
+
+    /**
      * Polynomial evaluation with `this` as variable.
      * p(x) = coefficients[0] + coefficients[1] * x + ... + coefficients[i] *
      *x^i
@@ -133,7 +147,7 @@ class CKKSVector
     void _mul_plain_inplace(Ciphertext& ct, const T& to_mul);
 
     CKKSVector(const shared_ptr<TenSEALContext>& ctx, const plain_t& vec,
-               optional<double> scale = {});
+               std::optional<double> scale = {});
     CKKSVector(const shared_ptr<TenSEALContext>& ctx, const string& vec);
     CKKSVector(const string& vec);
     CKKSVector(const TenSEALContextProto& ctx, const CKKSVectorProto& vec);

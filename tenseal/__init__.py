@@ -60,6 +60,30 @@ def enc_matmul_encoding(context: Context, tensor) -> CKKSVector:
     return CKKSVector._wrap(_ts_cpp.enc_matmul_encoding(context.data, matrix))
 
 
+def enc_matmul_vector_encoding(context: Context, vector, row_size: int) -> CKKSVector:
+    """Encode a vector into a CKKSVector compatible with matrix(enc)-vector(enc) multiplication.
+
+    The encoding matches the layout expected by `CKKSVector.enc_matmul_enc` where each vector
+    element is repeated `row_size` times and the vector is padded to the next power of 2.
+
+    Args:
+        context: a Context object, holding the encryption parameters and keys.
+        vector: tensor-like object of shape 1 (vector).
+        row_size: number of rows in the encoded matrix used in multiplication.
+
+    Returns:
+        Encrypted vector encoded as a CKKSVector.
+    """
+    if not isinstance(context, Context):
+        raise TypeError("context must be of type tenseal.Context")
+    if not isinstance(vector, PlainTensor):
+        vector = plain_tensor(vector)
+    if len(vector.shape) != 1:
+        raise ValueError("vector must be 1-D")
+    return CKKSVector._wrap(
+        _ts_cpp.enc_matmul_vector_encoding(context.data, vector.tolist(), row_size)
+    )
+
 def context(*args, **kwargs) -> Context:
     """Constructor function for tenseal.Context"""
     return Context(*args, **kwargs)

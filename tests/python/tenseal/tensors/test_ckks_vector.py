@@ -1069,6 +1069,50 @@ def test_enc_matmul_plain_inplace(context, matrix_shape, vector_size, precision)
 
 
 @pytest.mark.parametrize(
+    "matrix_shape, vector_size",
+    [((1, 1), 1), ((2, 1), 1), ((3, 2), 2), ((4, 4), 4), ((9, 7), 7), ((16, 12), 12)],
+)
+def test_enc_matmul_enc(context, matrix_shape, vector_size, precision):
+    def generate_input(matrix_shape, vector_size):
+        matrix = np.random.randn(*matrix_shape)
+        vector = np.random.randn(vector_size)
+        return matrix, vector
+
+    matrix, vector = generate_input(matrix_shape, vector_size)
+    expected = matrix @ vector
+
+    context.generate_galois_keys()
+    ckks_matrix = ts.enc_matmul_encoding(context, matrix.tolist())
+    ckks_vector = ts.enc_matmul_vector_encoding(context, vector.tolist(), matrix_shape[0])
+    result = ckks_matrix.enc_matmul_enc(ckks_vector, matrix_shape[0])
+    assert _almost_equal(
+        result.decrypt(), expected, precision
+    ), "Encrypted-encoded matrix multiplication is incorrect."
+
+
+@pytest.mark.parametrize(
+    "matrix_shape, vector_size",
+    [((1, 1), 1), ((2, 1), 1), ((3, 2), 2), ((4, 4), 4), ((9, 7), 7), ((16, 12), 12)],
+)
+def test_enc_matmul_enc_inplace(context, matrix_shape, vector_size, precision):
+    def generate_input(matrix_shape, vector_size):
+        matrix = np.random.randn(*matrix_shape)
+        vector = np.random.randn(vector_size)
+        return matrix, vector
+
+    matrix, vector = generate_input(matrix_shape, vector_size)
+    expected = matrix @ vector
+
+    context.generate_galois_keys()
+    ckks_matrix = ts.enc_matmul_encoding(context, matrix.tolist())
+    ckks_vector = ts.enc_matmul_vector_encoding(context, vector.tolist(), matrix_shape[0])
+    ckks_matrix.enc_matmul_enc_(ckks_vector, matrix_shape[0])
+    assert _almost_equal(
+        ckks_matrix.decrypt(), expected, precision
+    ), "Encrypted-encoded matrix multiplication is incorrect."
+
+
+@pytest.mark.parametrize(
     "data, polynom",
     [
         # null polynom

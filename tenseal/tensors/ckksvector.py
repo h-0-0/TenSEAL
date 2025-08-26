@@ -211,3 +211,14 @@ class CKKSVector(AbstractTensor):
         other = self._enc_matmul_plain(other)
         self.data.enc_matmul_plain_(other, row_size)
         return self
+
+    def enc_matmul_enc(self, other: "CKKSVector", row_size) -> "CKKSVector":
+        if not isinstance(other, CKKSVector):
+            raise TypeError(f"can't operate with object of type {type(other)}")
+        return self._wrap(self.data.enc_matmul_enc(other.data, row_size))
+
+    def enc_matmul_enc_(self, other: "CKKSVector", row_size) -> "CKKSVector":
+        if not isinstance(other, CKKSVector):
+            raise TypeError(f"can't operate with object of type {type(other)}")
+        self.data.enc_matmul_enc_(other.data, row_size)
+        return self

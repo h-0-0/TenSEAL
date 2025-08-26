@@ -408,6 +408,16 @@ void bind_ckks_vector(py::module &m) {
                 size_t row_size) {
                  return obj->enc_matmul_plain_inplace(matrix, row_size);
              })
+        .def("enc_matmul_enc",
+             [](shared_ptr<CKKSVector> obj, const shared_ptr<CKKSVector> &enc_vec,
+                size_t row_size) {
+                 return obj->enc_matmul_enc(enc_vec, row_size);
+             })
+        .def("enc_matmul_enc_",
+             [](shared_ptr<CKKSVector> obj, const shared_ptr<CKKSVector> &enc_vec,
+                size_t row_size) {
+                 return obj->enc_matmul_enc_inplace(enc_vec, row_size);
+             })
         // python arithmetic
         .def("__neg__", &CKKSVector::negate)
         .def("__pow__", &CKKSVector::power)
@@ -546,6 +556,31 @@ void bind_ckks_vector(py::module &m) {
 
         return CKKSVector::Create(ctx, final_vector);
     });
+
+    m.def("enc_matmul_vector_encoding",
+          [](shared_ptr<TenSEALContext> ctx, const vector<double> &input,
+             const size_t row_size) {
+              if (row_size == 0) {
+                  throw invalid_argument("row_size must be > 0");
+              }
+              // calculate the next power of 2
+              size_t plain_vec_size = 1 << (static_cast<size_t>(
+                  ceil(log2(static_cast<double>(max<size_t>(1, input.size()))))));
+
+              // pad the vector with zeros to the next power of 2
+              vector<double> padded_vec(plain_vec_size, 0.0);
+              copy(input.begin(), input.end(), padded_vec.begin());
+
+              // expand by repeating each element row_size times
+              vector<double> expanded;
+              expanded.reserve(row_size * plain_vec_size);
+              for (size_t i = 0; i < plain_vec_size; i++) {
+                  for (size_t r = 0; r < row_size; r++) expanded.push_back(padded_vec[i]);
+              }
+
+              PlainTensor<double> tensor(expanded);
+              return CKKSVector::Create(ctx, tensor);
+          });
 }
 
 void bind_ckks_tensor(py::module &m) {
