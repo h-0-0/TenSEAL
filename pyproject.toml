@@ -16,3 +16,7 @@ exclude = '''
     | third_party
 )
 '''
+
+[build-system]
+requires = ["setuptools>=42", "wheel", "cmake<4"]
+build-backend = "setuptools.build_meta"
