@@ -17,7 +17,7 @@ jobs:
           - os: ubuntu-latest
           - os: macos-13
             mac_archs: x86_64
-            mac_deploy: "10.12"
+            mac_deploy: "10.13"
           - os: macos-14
             mac_archs: arm64
             mac_deploy: "11.0"

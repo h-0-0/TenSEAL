@@ -83,8 +83,8 @@ class CMakeBuild(build_ext):
             if deployment_target:
                 if "arm64" in arch_list and _ver_tuple(deployment_target) < _ver_tuple("11.0"):
                     deployment_target = "11.0"
-                if "x86_64" in arch_list and _ver_tuple(deployment_target) < _ver_tuple("10.12"):
-                    deployment_target = "10.12"
+                if "x86_64" in arch_list and _ver_tuple(deployment_target) < _ver_tuple("10.13"):
+                    deployment_target = "10.13"
             if deployment_target:
                 cmake_args += [f"-DCMAKE_OSX_DEPLOYMENT_TARGET={deployment_target}"]
             # Prefer Ninja on macOS for consistent generator behavior
