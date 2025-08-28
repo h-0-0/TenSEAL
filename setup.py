@@ -76,11 +76,19 @@ class CMakeBuild(build_ext):
                 if "arm64" in arch_list:
                     deployment_target = "11.0"
                 elif "x86_64" in arch_list:
-                    deployment_target = "10.9"
+                    deployment_target = "10.12"
+            # Enforce minimums required by dependencies
+            def _ver_tuple(v: str):
+                return tuple(int(x) for x in v.split("."))
+            if deployment_target:
+                if "arm64" in arch_list and _ver_tuple(deployment_target) < _ver_tuple("11.0"):
+                    deployment_target = "11.0"
+                if "x86_64" in arch_list and _ver_tuple(deployment_target) < _ver_tuple("10.12"):
+                    deployment_target = "10.12"
             if deployment_target:
                 cmake_args += [f"-DCMAKE_OSX_DEPLOYMENT_TARGET={deployment_target}"]
             # Prefer Ninja on macOS for consistent generator behavior
-            cmake_args += ["-G", "Ninja", "-DCMAKE_VERBOSE_MAKEFILE=ON"]
+            cmake_args += ["-G", "Ninja", "-DCMAKE_VERBOSE_MAKEFILE=ON", "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF"]
         else:
             # Increase CMake verbosity on non-macOS as well
             cmake_args += ["-DCMAKE_VERBOSE_MAKEFILE=ON"]
