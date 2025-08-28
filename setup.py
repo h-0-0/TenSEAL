@@ -16,9 +16,11 @@ def read(fname):
 
 def find_version():
     version_file = read("tenseal/version.py")
-    version_re = r"__version__ = \"(?P<version>.+)\""
-    version = re.match(version_re, version_file).group("version")
-    return version
+    version_re = r"__version__\s*=\s*\"(?P<version>[^\"]+)\""
+    m = re.search(version_re, version_file)
+    if not m:
+        raise RuntimeError("Failed to parse __version__ from tenseal/version.py")
+    return m.group("version")
 
 
 class CMakeExtension(Extension):
@@ -38,7 +40,10 @@ class CMakeBuild(build_ext):
             )
 
         if platform.system() == "Windows":
-            cmake_version = LooseVersion(re.search(r"version\s*([\d.]+)", out.decode()).group(1))
+            m = re.search(r"version\s*([\d.]+)", out.decode())
+            if not m:
+                raise RuntimeError("Failed to parse CMake version from output")
+            cmake_version = LooseVersion(m.group(1))
             if cmake_version < "3.1.0":
                 raise RuntimeError("CMake >= 3.1.0 is required on Windows")
 
@@ -87,8 +92,9 @@ class CMakeBuild(build_ext):
             build_args += ["--", "/m", "/p:TrackFileAccess=false"]
         else:
             cmake_args += ["-DCMAKE_BUILD_TYPE=" + cfg]
-            if "MAKEFLAGS" not in env:
-                build_args += ["--", "-j"]
+
+        # Use CMake's cross-generator parallel level instead of "-- -j"
+        env.setdefault("CMAKE_BUILD_PARALLEL_LEVEL", str(os.cpu_count() or 2))
 
         env["CXXFLAGS"] = '{} -DVERSION_INFO=\\"{}\\"'.format(
             env.get("CXXFLAGS", ""), self.distribution.get_version()
