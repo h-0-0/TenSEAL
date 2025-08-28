@@ -84,4 +84,5 @@ set(PROTO_SOURCES ${PROTO_ROOT}/tensealcontext.pb.cc
                   ${PROTO_ROOT}/tensors.pb.cc)
 
 add_library(tenseal_proto ${PROTO_SOURCES})
-target_link_libraries(tenseal_proto INTERFACE ${Protobuf_LIBRARIES})
+# Ensure dependents pick up both the full and lite protobuf libs (fixes undefined symbols on macOS arm64)
+target_link_libraries(tenseal_proto INTERFACE ${Protobuf_LIBRARIES} ${Protobuf_LITE_LIBRARIES})
