@@ -41,12 +41,14 @@ jobs:
           CIBW_BUILD: "cp38-* cp39-*"
           CIBW_SKIP: "pp* *musllinux*"
           # Install cmake<4 in the build environment to avoid policy issues
-          CIBW_BEFORE_BUILD: "python -m pip install --upgrade pip && pip install 'cmake<4'"
+          CIBW_BEFORE_BUILD: "python -m pip install --upgrade pip && pip install 'cmake<4' ninja"
           # Build for both x86_64 and aarch64 on Linux, and both on macOS
           CIBW_ARCHS_LINUX: "x86_64 aarch64"
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           # Set deployment target for macOS 11+ to satisfy delocate's expectations
           MACOSX_DEPLOYMENT_TARGET: "11.0"
+          # Extra diagnostics for macOS delocate failures
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-listdeps {wheel} && delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
           # Use manylinux2014 (default), OK for cp38/cp39
         run: |
           python -m cibuildwheel --output-dir wheelhouse

@@ -65,9 +65,20 @@ class CMakeBuild(build_ext):
             arch_list = re.findall(r"-arch\s+(\S+)", archflags)
             if arch_list:
                 cmake_args += [f"-DCMAKE_OSX_ARCHITECTURES={';'.join(arch_list)}"]
+            # Set deployment target per-arch if not explicitly provided
             deployment_target = env.get("MACOSX_DEPLOYMENT_TARGET")
+            if not deployment_target:
+                if "arm64" in arch_list:
+                    deployment_target = "11.0"
+                elif "x86_64" in arch_list:
+                    deployment_target = "10.9"
             if deployment_target:
                 cmake_args += [f"-DCMAKE_OSX_DEPLOYMENT_TARGET={deployment_target}"]
+            # Prefer Ninja on macOS for consistent generator behavior
+            cmake_args += ["-G", "Ninja", "-DCMAKE_VERBOSE_MAKEFILE=ON"]
+        else:
+            # Increase CMake verbosity on non-macOS as well
+            cmake_args += ["-DCMAKE_VERBOSE_MAKEFILE=ON"]
 
         if platform.system() == "Windows":
             cmake_args += [f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}"]
