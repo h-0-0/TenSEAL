@@ -59,6 +59,16 @@ class CMakeBuild(build_ext):
 
         env = os.environ.copy()
 
+        if platform.system() == "Darwin":
+            # Ensure CMake builds the architecture requested by cibuildwheel
+            archflags = env.get("ARCHFLAGS", "")
+            arch_list = re.findall(r"-arch\s+(\S+)", archflags)
+            if arch_list:
+                cmake_args += [f"-DCMAKE_OSX_ARCHITECTURES={';'.join(arch_list)}"]
+            deployment_target = env.get("MACOSX_DEPLOYMENT_TARGET")
+            if deployment_target:
+                cmake_args += [f"-DCMAKE_OSX_DEPLOYMENT_TARGET={deployment_target}"]
+
         if platform.system() == "Windows":
             cmake_args += [f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}"]
             if sys.maxsize > 2**32:

@@ -45,6 +45,8 @@ jobs:
           # Build for both x86_64 and aarch64 on Linux, and both on macOS
           CIBW_ARCHS_LINUX: "x86_64 aarch64"
           CIBW_ARCHS_MACOS: "x86_64 arm64"
+          # Set deployment target for macOS 11+ to satisfy delocate's expectations
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
           # Use manylinux2014 (default), OK for cp38/cp39
         run: |
           python -m cibuildwheel --output-dir wheelhouse
