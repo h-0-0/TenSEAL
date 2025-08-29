@@ -14,14 +14,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Ubuntu split into two entries to reduce per-job build time
           - os: ubuntu-latest
+            cibw_build: "cp38-* cp39-* cp310-*"
+          - os: ubuntu-latest
+            cibw_build: "cp311-* cp312-* cp313-*"
+          # macOS x86_64
           - os: macos-13
             mac_archs: x86_64
             mac_deploy: "10.13"
+            cibw_build: "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
+          # macOS arm64
           - os: macos-14
             mac_archs: arm64
             mac_deploy: "11.0"
+            cibw_build: "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
+          # Windows
           - os: windows-latest
+            cibw_build: "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
 
     steps:
       - name: Checkout
@@ -55,8 +65,8 @@ jobs:
 
       - name: Build wheels
         env:
-          # Build CPython 3.8+ wheels; skip PyPy and musllinux
-          CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
+          # Build selected CPython versions per-matrix entry; skip PyPy and musllinux
+          CIBW_BUILD: "${{ matrix.cibw_build }}"
           CIBW_SKIP: "pp* *musllinux*"
           CIBW_BUILD_VERBOSITY: "1"
           # Install cmake/ninja once per environment
