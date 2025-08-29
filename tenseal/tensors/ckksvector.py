@@ -222,3 +222,40 @@ class CKKSVector(AbstractTensor):
             raise TypeError(f"can't operate with object of type {type(other)}")
         self.data.enc_matmul_enc_(other.data, row_size)
         return self
+
+    def rotate_vector_inplace(
+        self, steps: int, galois_keys: "ts.enc_context.GaloisKeys" = None
+    ) -> "CKKSVector":
+        if galois_keys is None:
+            ctx = self.context()
+            if not ctx.has_galois_keys():
+                raise ValueError("context does not have galois keys")
+            galois_keys = ctx.galois_keys()
+        self.data.rotate_vector_inplace(int(steps), galois_keys.data)
+        return self
+
+    def rotate_vector(
+        self, steps: int, galois_keys: "ts.enc_context.GaloisKeys" = None
+    ) -> "CKKSVector":
+        """Return a new CKKSVector rotated by the given number of steps.
+
+        Args:
+            steps: Number of slots to rotate. Positive rotates left, negative right.
+            galois_keys: Optional Galois keys. If not provided, uses keys from the context.
+
+        Returns:
+            A new rotated CKKSVector.
+        """
+        if galois_keys is None:
+            ctx = self.context()
+            if not ctx.has_galois_keys():
+                raise ValueError("context does not have galois keys")
+            galois_keys = ctx.galois_keys()
+        # Prefer non-inplace API if available
+        if hasattr(self.data, "rotate_vector"):
+            result = self.data.rotate_vector(int(steps), galois_keys.data)
+            return self._wrap(result)
+        # Fallback: copy via addition of zero and rotate inplace
+        dup = self._wrap(self.data + 0)
+        dup.rotate_vector_inplace(int(steps), galois_keys)
+        return dup
