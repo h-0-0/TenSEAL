@@ -1,0 +1,3 @@
+repository='https://github.com/microsoft/SEAL'
+module=''
+tag='origin'
