@@ -43,18 +43,33 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install cibuildwheel
 
+      - name: Cache ccache (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake', 'setup.py') }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ github.ref }}-
+            ccache-${{ runner.os }}-
+
       - name: Build wheels
         env:
           # Build CPython 3.8+ wheels; skip PyPy and musllinux
           CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
           CIBW_SKIP: "pp* *musllinux*"
           CIBW_BUILD_VERBOSITY: "1"
-          # Install cmake<4 in the build environment to avoid policy issues
-          CIBW_BEFORE_BUILD: "python -m pip install --upgrade pip && pip install 'cmake<4' ninja"
+          # Install cmake/ninja once per environment
+          CIBW_BEFORE_ALL: "python -m pip install --upgrade pip && pip install 'cmake<4' ninja"
           # On Windows, avoid '<' redirection by pinning a 3.x CMake explicitly
-          CIBW_BEFORE_BUILD_WINDOWS: "python -m pip install --upgrade pip && pip install cmake==3.27.9 ninja"
-          # Build for both x86_64 and aarch64 on Linux, and both on macOS
-          CIBW_ARCHS_LINUX: "x86_64 aarch64"
+          CIBW_BEFORE_ALL_WINDOWS: "python -m pip install --upgrade pip && pip install cmake==3.27.9 ninja"
+          # Linux archs: include aarch64 only on tags (avoid QEMU on regular runs)
+          CIBW_ARCHS_LINUX: "${{ startsWith(github.ref, 'refs/tags/') && 'x86_64 aarch64' || 'x86_64' }}"
+          # Enable ccache inside manylinux containers
+          CIBW_BEFORE_ALL_LINUX: "yum -y install ccache || dnf -y install ccache || microdnf -y install ccache || true"
+          CIBW_ENVIRONMENT_LINUX: "CMAKE_C_COMPILER_LAUNCHER=ccache CMAKE_CXX_COMPILER_LAUNCHER=ccache CCACHE_DIR=/ccache CCACHE_MAXSIZE=1G"
+          CIBW_MANYLINUX_X86_64_EXTRA_ARGS: "--volume ${{ github.workspace }}/.ccache:/ccache"
+          CIBW_MANYLINUX_AARCH64_EXTRA_ARGS: "--volume ${{ github.workspace }}/.ccache:/ccache"
           # Use manylinux 2.28 images for newer Python/GLIBC compatibility
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
           CIBW_MANYLINUX_AARCH64_IMAGE: "manylinux_2_28"
@@ -68,6 +83,7 @@ jobs:
           # Use manylinux2014 (default), OK for cp38/cp39
         run: |
           python -m cibuildwheel --output-dir wheelhouse
+        timeout-minutes: 120
 
       - name: Upload wheels (artifact)
         uses: actions/upload-artifact@v4
@@ -78,7 +94,7 @@ jobs:
   release:
     name: Create GitHub Release and attach wheels
     needs: [build-wheels]
-    if: startsWith(github.ref, 'refs/tags/')
+    if: ${{ always() && startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
     steps:
       - name: Download all wheel artifacts
