@@ -19,7 +19,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Sync and update submodules (recursive)
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -47,6 +53,10 @@ jobs:
       - name: Setup msbuild (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         uses: microsoft/setup-msbuild@v2
+
+      - name: Enable git long paths (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: git config --system core.longpaths true
 
       - name: Build the library (non-Windows)
         if: ${{ matrix.os != 'windows-latest' }}
